@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="heading">
+        <h1>Parent Page</h1>
+    </div>
+    <div class="content">
+        <div class="message-status">
+            <h2>Message received from embedded React app</h2>
+            <p id="reactMessage">None</p>
+        </div>
+        <form id="parentForm" onSubmit="">
+            <label htmlFor="message" class="label">Message for embedded React app</label>
+            <input type="text" id="message" placeholder="Enter message"></input>
+            <input type="submit" value="Send" class="submit"/>
+        </form>
+        <iframe id="react-iframe" src="https://react-embed.primitive.co/"></iframe>
+    </div>
+    <script type="text/javascript" src="scripts/purify.min.js"></script>
+    <script>
+        const isValidString = message => {
+            const maxLength = 100;
+            const minLength = 1;
+            const regex = /^[a-zA-Z0-9\s]*$/;
+
+            if (typeof message !== "string") {
+                return false;
+            }
+
+            if (message.length < minLength || message.length > maxLength) {
+                return false;
+            }
+
+            if (!regex.test(message)) {
+                return false;
+            }
+
+            return true;
+        }
+
+        const sanitiseString = message => {
+            return DOMPurify.sanitize(message);
+        }
+        const handleSubmit = e => {
+            e.preventDefault();
+            const message = document.querySelector("#message").value;
+
+            if (message.length && isValidString(message)) {
+                const sanitisedMessage = sanitiseString(message);
+                const reactAppWindow = document.querySelector("#react-iframe").contentWindow;
+                reactAppWindow.postMessage(sanitisedMessage, "https://react-embed.primitive.co");
+            }
+        };
+
+        addEventListener("DOMContentLoaded", e => {
+            const form = document.querySelector("#parentForm");
+            form.addEventListener("submit", handleSubmit);
+
+            window.addEventListener("message", e => {
+                if (e.origin !== "https://react-embed.primitive.co") { return; }
+
+                const message = e.data;
+
+                if (typeof message === "string") {
+                    document.querySelector("#reactMessage").textContent = message;
+                }
+            })
+        });
+    </script>
+</body>
+</html>
